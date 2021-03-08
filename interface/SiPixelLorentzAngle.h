@@ -98,6 +98,11 @@ class SiPixelLorentzAngle : public edm::EDAnalyzer
  private:
   
   void fillPix(const SiPixelCluster & LocPix, const PixelTopology * topol, Pixinfo& pixinfo);
+  void surface_derormation(const PixelTopology *topol, 
+			   TrajectoryStateOnSurface &tsos, 
+			   const SiPixelRecHit *recHitPix,
+			   LocalPoint &lp_track, 
+			   LocalPoint &lp_rechit);
 
 
   void findMean(int i, int i_ring);
@@ -125,6 +130,11 @@ class SiPixelLorentzAngle : public edm::EDAnalyzer
   Hit simhit_, trackhit_;
   Clust clust_;
   Rechit rechit_;
+  Rechit rechitCorr_;
+  float trackhitCorrX_;
+  float trackhitCorrY_;
+  float qScale_;
+  float rQmQt_;
   
   // tree branches forward
   int runF_;
@@ -143,6 +153,11 @@ class SiPixelLorentzAngle : public edm::EDAnalyzer
   Hit simhitF_, trackhitF_;
   Clust clustF_;
   Rechit rechitF_;
+  Rechit rechitCorrF_;
+  float trackhitCorrXF_;
+  float trackhitCorrYF_;
+  float qScaleF_;
+  float rQmQtF_;
   
   // parameters from config file
 
@@ -209,6 +224,5 @@ class SiPixelLorentzAngle : public edm::EDAnalyzer
   edm::EDGetTokenT<edm::PCaloHitContainer>  tok_caloHH_;
 
 };
-
 
 #endif

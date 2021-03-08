@@ -25,9 +25,11 @@
 #include "TrackingTools/TrackFitters/interface/TrajectoryStateCombiner.h"
 #include "TrackingTools/PatternTools/interface/TrajTrackAssociation.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrack.h"
+#include "CalibTracker/Records/interface/SiPixelTemplateDBObjectESProducerRcd.h"
+#include "CondFormats/SiPixelObjects/interface/SiPixelTemplateDBObject.h"
+#include "CondFormats/SiPixelTransient/interface/SiPixelTemplateDefs.h"
+#include "CondFormats/SiPixelTransient/interface/SiPixelTemplate.h"
 #include "../interface/SiPixelLorentzAngle.h"
-
-
 
 
 int lower_bin_;
@@ -96,7 +98,12 @@ void SiPixelLorentzAngle::beginJob()
   SiPixelLorentzAngleTree_->Branch("ypix", pixinfo_.y, "y[npix]/F", bufsize);
   SiPixelLorentzAngleTree_->Branch("clust", &clust_, "x/F:y/F:charge/F:size_x/I:size_y/I:maxPixelCol/I:maxPixelRow:minPixelCol/I:minPixelRow/I", bufsize);
   SiPixelLorentzAngleTree_->Branch("rechit", &rechit_, "x/F:y/F", bufsize);
-	
+  SiPixelLorentzAngleTree_->Branch("rechit_corr", &rechitCorr_, "x/F:y/F", bufsize);   
+  SiPixelLorentzAngleTree_->Branch("trackhitcorr_x", &trackhitCorrX_, "trackhitcorr_x/F", bufsize);
+  SiPixelLorentzAngleTree_->Branch("trackhitcorr_y", &trackhitCorrY_, "trackhitcorr_y/F", bufsize);
+  SiPixelLorentzAngleTree_->Branch("qScale", &qScale_, "qScale/F", bufsize);
+  SiPixelLorentzAngleTree_->Branch("rQmQt", &rQmQt_, "rQmQt/F", bufsize);
+  
   SiPixelLorentzAngleTreeForward_ = new TTree("SiPixelLorentzAngleTreeForward_","SiPixel LorentzAngle tree forward", bufsize);
   SiPixelLorentzAngleTreeForward_->Branch("run", &run_, "run/I", bufsize);
   SiPixelLorentzAngleTreeForward_->Branch("event", &event_, "event/l", bufsize);
@@ -123,8 +130,12 @@ void SiPixelLorentzAngle::beginJob()
   SiPixelLorentzAngleTreeForward_->Branch("ypix", pixinfoF_.y, "y[npix]/F", bufsize);
   SiPixelLorentzAngleTreeForward_->Branch("clust", &clustF_, "x/F:y/F:charge/F:size_x/I:size_y/I:maxPixelCol/I:maxPixelRow:minPixelCol/I:minPixelRow/I", bufsize);
   SiPixelLorentzAngleTreeForward_->Branch("rechit", &rechitF_, "x/F:y/F", bufsize);
-	
-	
+  SiPixelLorentzAngleTree_->Branch("rechit_corr", &rechitCorrF_, "x/F:y/F", bufsize);   
+  SiPixelLorentzAngleTree_->Branch("trackhitcorr_x", &trackhitCorrXF_, "trackhitcorr_x/F", bufsize);
+  SiPixelLorentzAngleTree_->Branch("trackhitcorr_y", &trackhitCorrYF_, "trackhitcorr_y/F", bufsize);
+  SiPixelLorentzAngleTreeForward_->Branch("qScale", &qScaleF_, "qScale/F", bufsize);
+  SiPixelLorentzAngleTreeForward_->Branch("rQmQt", &rQmQtF_, "rQmQt/F", bufsize);
+  
   //book histograms
   char name[128];
   for(int i_module = 1; i_module<=8; i_module++){
@@ -164,7 +175,19 @@ void SiPixelLorentzAngle::beginJob()
 
 // Functions that gets called by framework every event
 void SiPixelLorentzAngle::analyze(const edm::Event& e, const edm::EventSetup& es)
-{
+{  
+  //Retrieve template stuff
+  const SiPixelTemplateDBObject* templateDBobject_;
+  edm::ESHandle<SiPixelTemplateDBObject> templateDBobject;
+  es.get<SiPixelTemplateDBObjectESProducerRcd>().get(templateDBobject);
+  templateDBobject_ = templateDBobject.product();
+  std::vector<SiPixelTemplateStore> thePixelTemp_;
+  SiPixelTemplate templ(thePixelTemp_);
+  if (!SiPixelTemplate::pushfile(*templateDBobject_, thePixelTemp_))
+    cout << "\nERROR: Templates not filled correctly. Check the sqlite file."
+         << "Using SiPixelTemplateDBObject version "
+         << (*templateDBobject_).version() << "\n\n";
+  
   //Retrieve tracker topology from geometry
   edm::ESHandle<TrackerTopology> tTopoHandle;
   es.get<TrackerTopologyRcd>().get(tTopoHandle);
@@ -283,6 +306,7 @@ void SiPixelLorentzAngle::analyze(const edm::Event& e, const edm::EventSetup& es
 	  clust_.maxPixelRow = cluster->maxPixelRow();
 	  clust_.minPixelCol = cluster->minPixelCol();
 	  clust_.minPixelRow = cluster->minPixelRow();
+
 	  // fill entries in pixinfo_:
 	  fillPix(*cluster ,topol, pixinfo_);
 	  // fill the trackhit info
@@ -301,8 +325,35 @@ void SiPixelLorentzAngle::analyze(const edm::Event& e, const edm::EventSetup& es
 	  trackhit_.gamma = atan2(trackdirection.x(),trackdirection.y());
 	  trackhit_.x = trackposition.x();
 	  trackhit_.y = trackposition.y();
-					
 	
+	  // get qScale_ = templ.qscale() and  templ.r_qMeas_qTrue();
+	  
+	  float cotalpha = 1./TMath::Tan(trackhit_.alpha);
+          float cotbeta = 1./TMath::Tan(trackhit_.beta);
+          float locBx = 1.;
+          if(cotbeta < 0.)
+            locBx = -1.;
+          float locBz = locBx;
+          if(cotalpha < 0.)
+            locBz = -locBx;
+	  
+          auto  detId = detIdObj.rawId();
+          int TemplID = -9999;
+          TemplID = templateDBobject_->getTemplateID(detId);
+          templ.interpolate(TemplID, cotalpha, cotbeta, locBz, locBx);
+	  qScale_ = templ.qscale();
+          rQmQt_ = templ.r_qMeas_qTrue();
+	  
+          // Surface deformation
+          LocalPoint lp_track;        
+          LocalPoint lp_rechit;
+	  surface_derormation(topol, tsos, recHitPix, lp_track, lp_rechit); 
+
+          rechitCorr_.x = lp_rechit.x();
+          rechitCorr_.y = lp_rechit.y();
+          trackhitCorrX_ = lp_track.x();
+          trackhitCorrY_ = lp_track.y();
+	  
 	  // fill entries in simhit_:	
 	  if(simData_){
 	    matched.clear();        
@@ -420,8 +471,34 @@ void SiPixelLorentzAngle::analyze(const edm::Event& e, const edm::EventSetup& es
 	  trackhitF_.gamma = atan2(trackdirection.x(),trackdirection.y());
 	  trackhitF_.x = trackposition.x();
 	  trackhitF_.y = trackposition.y();
+
+	  // get qScale_ = templ.qscale() and  templ.r_qMeas_qTrue();	  
+	  float cotalpha = 1./TMath::Tan(trackhitF_.alpha);
+          float cotbeta = 1./TMath::Tan(trackhitF_.beta);
+          float locBx = 1.;
+          if(cotbeta < 0.)
+            locBx = -1.;
+          float locBz = locBx;
+          if(cotalpha < 0.)
+            locBz = -locBx;
+	  
+          auto  detId = detIdObj.rawId();
+          int TemplID = -9999;
+          TemplID = templateDBobject_->getTemplateID(detId);
+          templ.interpolate(TemplID, cotalpha, cotbeta, locBz, locBx);
+	  qScaleF_ = templ.qscale();
+          rQmQtF_ = templ.r_qMeas_qTrue();
+
+          // Surface deformation
+          LocalPoint lp_track;        
+          LocalPoint lp_rechit;
+	  surface_derormation(topol, tsos, recHitPix, lp_track, lp_rechit); 
+	  rechitCorrF_.x = lp_rechit.x();
+          rechitCorrF_.y = lp_rechit.y();
+          trackhitCorrXF_ = lp_track.x();
+          trackhitCorrYF_ = lp_track.y();
+	  
 					
-	
 	  // fill entries in simhit_:	
 /*	  if(simData_){
 	    matched.clear();        
@@ -576,3 +653,25 @@ void SiPixelLorentzAngle::findMean(int i, int i_ring)
   _h_mean_[i_ring]->SetBinError(i, error);
 
 }
+ void SiPixelLorentzAngle::surface_derormation(const PixelTopology *topol, 
+					       TrajectoryStateOnSurface &tsos, 
+					       const SiPixelRecHit *recHitPix,
+					       LocalPoint &lp_track, 
+					       LocalPoint &lp_rechit){
+
+   LocalPoint trackposition=tsos.localPosition();	  
+   const LocalTrajectoryParameters& ltp = tsos.localParameters();
+   const Topology::LocalTrackAngles  localTrackAngles (ltp.dxdz(), ltp.dydz());
+   
+   std::pair<float, float> pixels_track = topol->pixel(trackposition, localTrackAngles);
+   std::pair<float, float> pixels_rechit = topol->pixel(recHitPix->localPosition(),
+							localTrackAngles);
+   
+   lp_track = topol->localPosition(MeasurementPoint(pixels_track.first,
+						    pixels_track.second));
+   
+   lp_rechit = topol->localPosition(MeasurementPoint(pixels_rechit.first,
+						     pixels_rechit.second));
+ }
+ 
+ 

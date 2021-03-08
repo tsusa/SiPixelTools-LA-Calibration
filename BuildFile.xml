@@ -15,3 +15,5 @@
 <use   name="boost"/>
 <use   name="CondCore/DBOutputService"/>
 <use   name="CondFormats/SiPixelObjects"/>
+<use   name="CalibTracker/Records"/>
+<use   name="CondFormats/SiPixelTransient"/>
