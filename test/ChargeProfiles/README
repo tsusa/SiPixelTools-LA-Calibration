@@ -1,0 +1,15 @@
+compare_2018ULshaded_scaled.C is the plotting script to create charge profiles with a shaded are based on UL data.
+
+ccp_templates.C creates the charge profiles
+
+To produce the profiles below is a short example
+Example:
+
+root -b "ccp_templates.C(\"data2017_305406rereco\",
+\"root://eoscms.cern.ch//eos/cms/store/group/dpg_tracker_pixel/comm_pixel/LATrees/2017/305406_EOY17_v2/LA\",1474)"
+
+Where the first argument is the output directory where the output file
+is going to be saved (and you need to create it before hand), 
+the second argument is where the LA files are stored 
+and 1474 is the number of files. 
+Sometimes you need an extra argument “true” when the input files are ending with *_c.root
