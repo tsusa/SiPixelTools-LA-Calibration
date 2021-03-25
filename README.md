@@ -16,3 +16,8 @@ git clone https://github.com/CMSTrackerDPG/SiPixelTools-LA-Calibration.git SiPix
 scram b -j 8
 cd SiPixelTools/LA-Calibration/test/
 ```
+
+# Pixel Charge profile plots
+
+Follow instructions in
+SiPixelTools-LA-Calibration/test/ChargeProfiles/README
