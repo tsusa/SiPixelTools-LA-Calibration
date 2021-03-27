@@ -48,7 +48,9 @@ An example can be found here
 
 https://github.com/CMSTrackerDPG/SiPixelTools-LA-Calibration/blob/master/test/CRABFiles/CrabExampleMTPrivMC.py
 
-crab submit -c <crab file name> --dryrun
+crab submit -c CrabExampleMTPrivMC.py --dryrun
+
+(dryrun is needed just to check if the config is ok)
 
 # Pixel Charge profile plots
 
