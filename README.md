@@ -36,10 +36,19 @@ cmsDriver.py -s RAW2DIGI,L1Reco,RECO:reconstruction_trackingOnly --nThreads 8  -
 ```
 
 Then add this part
+
 https://github.com/CMSTrackerDPG/SiPixelTools-LA-Calibration/blob/master/test/SiPixelLorentzAngle_MC_2017_TTBar_cfg.py#L154-L170
+
 and this
+
 https://github.com/CMSTrackerDPG/SiPixelTools-LA-Calibration/blob/master/test/SiPixelLorentzAngle_MC_2017_TTBar_cfg.py#L176
 
+# Run with CRAB
+An example can be found here
+
+https://github.com/CMSTrackerDPG/SiPixelTools-LA-Calibration/blob/master/test/CRABFiles/CrabExampleMTPrivMC.py
+
+crab submit -c <crab file name> --dryrun
 
 # Pixel Charge profile plots
 
