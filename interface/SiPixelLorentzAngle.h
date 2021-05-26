@@ -203,6 +203,9 @@ class SiPixelLorentzAngle : public edm::EDAnalyzer
   
   int event_counter_, trackEventsCounter_,pixelTracksCounter_, hitCounter_, usedHitCounter_;
   
+  int nlay;
+  int nModules_[4];
+  
   // CMSSW classes needed
   PropagatorWithMaterial  *thePropagator;
   PropagatorWithMaterial  *thePropagatorOp;
