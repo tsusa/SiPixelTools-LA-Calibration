@@ -428,9 +428,9 @@ void SiPixelLorentzAngle::analyze(const edm::Event& e, const edm::EventSetup& es
 	      float dy = (pixinfo_.y[j]  - (trackhit_.y - width_/2. / TMath::Tan(trackhit_.beta))) * 10000.;
 	      float depth = dy * tan(trackhit_.beta);
 	      float drift = dx - dy * tan(trackhit_.gamma);
-	      _h_drift_depth_adc_[module_ + (layer_ -1) * 8]->Fill(drift, depth, pixinfo_.adc[j]);
-	      _h_drift_depth_adc2_[module_ + (layer_ -1) * 8]->Fill(drift, depth, pixinfo_.adc[j]*pixinfo_.adc[j]);
-	      _h_drift_depth_noadc_[module_ + (layer_ -1) * 8]->Fill(drift, depth);		
+	      _h_drift_depth_adc_[module_ + (layer_ -1) * nModules_[layer_ - 1]]->Fill(drift, depth, pixinfo_.adc[j]);
+	      _h_drift_depth_adc2_[module_ + (layer_ -1) * nModules_[layer_ - 1]]->Fill(drift, depth, pixinfo_.adc[j]*pixinfo_.adc[j]);
+	      _h_drift_depth_noadc_[module_ + (layer_ -1) * nModules_[layer_ - 1]]->Fill(drift, depth);		
 	      if( layer_ == 3 && module_==1 && isflipped_){
 		float dx_rot = dx * TMath::Cos(trackhit_.gamma) + dy * TMath::Sin(trackhit_.gamma);
 		float dy_rot = dy * TMath::Cos(trackhit_.gamma) - dx * TMath::Sin(trackhit_.gamma) ;
