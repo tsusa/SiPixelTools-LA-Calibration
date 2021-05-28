@@ -40,8 +40,7 @@ using namespace edm;
 using namespace reco;
 
 SiPixelLorentzAngle::SiPixelLorentzAngle(edm::ParameterSet const& conf) : 
-  filename_(conf.getParameter<std::string>("fileName")), filenameFit_(conf.getParameter<std::string>("fileNameFit")), ptmin_(conf.getParameter<double>("ptMin")), simData_(conf.getParameter<bool>("simData")),	normChi2Max_(conf.getParameter<double>("normChi2Max")), clustSizeYMin_(conf.getParameter<int>("clustSizeYMin")), residualMax_(conf.getParameter<double>("residualMax")), clustChargeMax_(conf.getParameter<double>("clustChargeMax")),hist_depth_(conf.getParameter<int>("binsDepth")), hist_drift_(conf.getParameter<int>("binsDrift")), trackerHitAssociatorConfig_(consumesCollector()), geomEsToken_(esConsumes<edm::Transition::BeginRun>()),
-      topoToken_(esConsumes<edm::Transition::BeginRun>())
+  filename_(conf.getParameter<std::string>("fileName")), filenameFit_(conf.getParameter<std::string>("fileNameFit")), ptmin_(conf.getParameter<double>("ptMin")), simData_(conf.getParameter<bool>("simData")),	normChi2Max_(conf.getParameter<double>("normChi2Max")), clustSizeYMin_(conf.getParameter<int>("clustSizeYMin")), residualMax_(conf.getParameter<double>("residualMax")), clustChargeMax_(conf.getParameter<double>("clustChargeMax")),hist_depth_(conf.getParameter<int>("binsDepth")), hist_drift_(conf.getParameter<int>("binsDrift")), trackerHitAssociatorConfig_(consumesCollector()), geomEsToken_(esConsumes<edm::Transition::BeginRun>()), topoToken_(esConsumes<edm::Transition::BeginRun>())
 {
   //   	anglefinder_=new  TrackLocalAngle(conf);
   hist_x_ = 50;
