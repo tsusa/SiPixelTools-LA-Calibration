@@ -225,6 +225,10 @@ class SiPixelLorentzAngle : public edm::EDAnalyzer
   edm::EDGetTokenT<edm::PCaloHitContainer>  tok_caloEB_;
   edm::EDGetTokenT<edm::PCaloHitContainer>  tok_caloEE_;
   edm::EDGetTokenT<edm::PCaloHitContainer>  tok_caloHH_;
+  
+  edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomEsToken_;
+  edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> topoToken_;
+
 
 };
 
