@@ -203,6 +203,9 @@ class SiPixelLorentzAngle : public edm::EDAnalyzer
   
   int event_counter_, trackEventsCounter_,pixelTracksCounter_, hitCounter_, usedHitCounter_;
   
+  int nlay;
+  int nModules_[4];
+  
   // CMSSW classes needed
   PropagatorWithMaterial  *thePropagator;
   PropagatorWithMaterial  *thePropagatorOp;
@@ -222,6 +225,10 @@ class SiPixelLorentzAngle : public edm::EDAnalyzer
   edm::EDGetTokenT<edm::PCaloHitContainer>  tok_caloEB_;
   edm::EDGetTokenT<edm::PCaloHitContainer>  tok_caloEE_;
   edm::EDGetTokenT<edm::PCaloHitContainer>  tok_caloHH_;
+  
+  edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomEsToken_;
+  edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> topoToken_;
+
 
 };
 
