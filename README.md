@@ -12,7 +12,7 @@ export SCRAM_ARCH=slc7_amd64_gcc820
 cmsrel CMSSW_11_1_4
 cd CMSSW_11_1_4/src
 cmsenv
-git clone https://github.com/CMSTrackerDPG/SiPixelTools-LA-Calibration.git SiPixelTools/LA-Calibration
+git clone -b CMSSW_11_1_X https://github.com/CMSTrackerDPG/SiPixelTools-LA-Calibration.git SiPixelTools/LA-Calibration
 scram b -j 8
 cd SiPixelTools/LA-Calibration/test/
 ```
