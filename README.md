@@ -8,10 +8,10 @@ Code to calibrate the LA from data.
 Prepare your working directory with CMSSW
 
 ```
-cmsrel CMSSW_11_2_0_pre10
-cd CMSSW_11_2_0_pre10/src
+cmsrel CMSSW_11_3_4_patch1
+cd CMSSW_11_3_4_patch1/src/
 cmsenv
-git clone https://github.com/CMSTrackerDPG/SiPixelTools-LA-Calibration.git SiPixelTools/LA-Calibration
+git clone -b CMSSW_11_3_X https://github.com/CMSTrackerDPG/SiPixelTools-LA-Calibration.git SiPixelTools/LA-Calibration
 scram b -j 8
 cd SiPixelTools/LA-Calibration/test/
 ```
