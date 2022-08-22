@@ -22,7 +22,7 @@ using namespace edm;
   //Constructor
 
 SiPixelLorentzAngleDB::SiPixelLorentzAngleDB(edm::ParameterSet const& conf) : 
-  conf_(conf){
+  conf_(conf),  tkGeomToken_(esConsumes()){
   	magneticField_ = conf_.getParameter<double>("magneticField");
 	recordName_ = conf_.getUntrackedParameter<std::string>("record","SiPixelLorentzAngleRcd");
 	bPixLorentzAnglePerTesla_ = (float)conf_.getParameter<double>("bPixLorentzAnglePerTesla");
@@ -48,11 +48,10 @@ SiPixelLorentzAngleDB::~SiPixelLorentzAngleDB() {
 void SiPixelLorentzAngleDB::analyze(const edm::Event& e, const edm::EventSetup& es)
 {
 
-	SiPixelLorentzAngle* LorentzAngle = new SiPixelLorentzAngle();
+	SiPixelLorentzAngle LorentzAngle;
 	   
 	
-	edm::ESHandle<TrackerGeometry> pDD;
-	es.get<TrackerDigiGeometryRecord>().get( pDD );
+        const TrackerGeometry* pDD = &es.getData(tkGeomToken_);
 	edm::LogInfo("SiPixelLorentzAngle") <<" There are "<<pDD->detUnits().size() <<" detectors"<<std::endl;
 	
 	for(TrackerGeometry::DetContainer::const_iterator it = pDD->detUnits().begin(); it != pDD->detUnits().end(); it++){
@@ -64,7 +63,7 @@ void SiPixelLorentzAngleDB::analyze(const edm::Event& e, const edm::EventSetup& 
 			if(detid.subdetId() == static_cast<int>(PixelSubdetector::PixelBarrel)) {
 				
 				if(!useFile_){
-					if ( ! LorentzAngle->putLorentzAngle(detid.rawId(),bPixLorentzAnglePerTesla_) )
+					if ( ! LorentzAngle.putLorentzAngle(detid.rawId(),bPixLorentzAnglePerTesla_) )
 					edm::LogError("SiPixelLorentzAngleDB")<<"[SiPixelLorentzAngleDB::analyze] detid already exists"<<std::endl;
 				} else {
 					cout << "method for reading file not implemented yet" << endl;
@@ -74,7 +73,7 @@ void SiPixelLorentzAngleDB::analyze(const edm::Event& e, const edm::EventSetup& 
 			// fill bpix values for LA 
 			} else if(detid.subdetId() == static_cast<int>(PixelSubdetector::PixelEndcap)) {
 				
-				if ( ! LorentzAngle->putLorentzAngle(detid.rawId(),fPixLorentzAnglePerTesla_) )
+				if ( ! LorentzAngle.putLorentzAngle(detid.rawId(),fPixLorentzAnglePerTesla_) )
 					edm::LogError("SiPixelLorentzAngleDB")<<"[SiPixelLorentzAngleDB::analyze] detid already exists"<<std::endl;
 			} else {
 				edm::LogError("SiPixelLorentzAngleDB")<<"[SiPixelLorentzAngleDB::analyze] detid is Pixel but neither bpix nor fpix"<<std::endl;
@@ -89,14 +88,13 @@ void SiPixelLorentzAngleDB::analyze(const edm::Event& e, const edm::EventSetup& 
 	if( mydbservice.isAvailable() ){
 		try{
 			if( mydbservice->isNewTagRequest(recordName_) ){
-				mydbservice->createNewIOV<SiPixelLorentzAngle>(LorentzAngle,
+				mydbservice->createOneIOV<SiPixelLorentzAngle>(LorentzAngle,
 									       mydbservice->beginOfTime(),
-									       mydbservice->endOfTime(),
 									       recordName_);
 			} else {
-				mydbservice->appendSinceTime<SiPixelLorentzAngle>(LorentzAngle,
-										  mydbservice->currentTime(),
-										  recordName_);
+				mydbservice->appendOneIOV<SiPixelLorentzAngle>(LorentzAngle,
+									       mydbservice->currentTime(),
+									       recordName_);
 			}
 		}catch(const cond::Exception& er){
 			edm::LogError("SiPixelLorentzAngleDB")<<er.what()<<std::endl;

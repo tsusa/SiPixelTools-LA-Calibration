@@ -3,7 +3,7 @@
 #include "CondFormats/DataRecord/interface/SiPixelLorentzAngleSimRcd.h"
 #include "Geometry/CommonTopologies/interface/PixelGeomDetUnit.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
-#include "CondTools/SiPixel/test/SiPixelLorentzAngleReader.h"
+#include "SiPixelLorentzAngleReader.h"
 #include "DataFormats/SiPixelDetId/interface/PixelSubdetector.h"
 #include "DataFormats/DetId/interface/DetId.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
@@ -21,6 +21,9 @@
 using namespace cms;
 
 SiPixelLorentzAngleReader::SiPixelLorentzAngleReader( const edm::ParameterSet& iConfig ):
+        tkTopoToken_(esConsumes()),
+        siPixelLAToken_(esConsumes()),
+        siPixelSimLAToken_(esConsumes()),   
 	printdebug_(iConfig.getUntrackedParameter<bool>("printDebug",false)),
 	useSimRcd_( iConfig.getParameter<bool>("useSimRcd") )
 {
@@ -29,11 +32,11 @@ SiPixelLorentzAngleReader::SiPixelLorentzAngleReader( const edm::ParameterSet& i
 SiPixelLorentzAngleReader::~SiPixelLorentzAngleReader(){}
 
 void SiPixelLorentzAngleReader::analyze( const edm::Event& e, const edm::EventSetup& iSetup){
-	edm::ESHandle<SiPixelLorentzAngle> SiPixelLorentzAngle_; 
+	const SiPixelLorentzAngle* SiPixelLorentzAngle_;
 	if(useSimRcd_ == true)
-		iSetup.get<SiPixelLorentzAngleSimRcd>().get(SiPixelLorentzAngle_);
+	        SiPixelLorentzAngle_ = &iSetup.getData(siPixelSimLAToken_);
 	else
-		iSetup.get<SiPixelLorentzAngleRcd>().get(SiPixelLorentzAngle_);
+	        SiPixelLorentzAngle_ = &iSetup.getData(siPixelLAToken_);
 	edm::LogInfo("SiPixelLorentzAngleReader") << "[SiPixelLorentzAngleReader::analyze] End Reading SiPixelLorentzAngle" << std::endl;
 	edm::Service<TFileService> fs;
 	LorentzAngleBarrel_ = fs->make<TH1F>("LorentzAngleBarrelPixel","LorentzAngleBarrelPixel",150,0,0.15);

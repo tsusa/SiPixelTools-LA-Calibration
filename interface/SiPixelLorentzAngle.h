@@ -1,8 +1,9 @@
 #ifndef CalibTracker_SiPixelLorentzAngle_SiPixelLorentzAngle_h
 #define CalibTracker_SiPixelLorentzAngle_SiPixelLorentzAngle_h
 
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/ESWatcher.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
@@ -27,6 +28,12 @@
 #include <Geometry/CommonTopologies/interface/PixelGeomDetUnit.h>
 #include "SimTracker/TrackerHitAssociation/interface/TrackerHitAssociator.h"
 #include "TrackingTools/PatternTools/interface/TrajTrackAssociation.h"
+#include "CalibTracker/Records/interface/SiPixelTemplateDBObjectESProducerRcd.h"
+#include "CondFormats/SiPixelObjects/interface/SiPixelTemplateDBObject.h"
+#include "CondFormats/SiPixelTransient/interface/SiPixelTemplate.h"
+#include "CondFormats/SiPixelTransient/interface/SiPixelTemplateDefs.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include <TROOT.h>
 #include <TTree.h>
 #include <TFile.h>
@@ -56,7 +63,7 @@
     float x[maxpix];
     float y[maxpix];
   };
-  struct Hit
+struct Hit
   {
     float x;
     float y;
@@ -83,21 +90,22 @@
   };
 //}
 
-class SiPixelLorentzAngle : public edm::EDAnalyzer
+class SiPixelLorentzAngle : public edm::one::EDAnalyzer<edm::one::WatchRuns,edm::one::SharedResources> 
 {
- public:
-  
+public:
+
   explicit SiPixelLorentzAngle(const edm::ParameterSet& conf);
-  
+
   virtual ~SiPixelLorentzAngle();
-  //virtual void beginJob(const edm::EventSetup& c);
   virtual void beginJob();
   virtual void endJob();
-  virtual void beginRun(const edm::Run& r, const edm::EventSetup& c);
-  virtual void analyze(const edm::Event& e, const edm::EventSetup& c);
-  
+  void beginRun(const edm::Run& r, const edm::EventSetup& c) override;
+  void endRun(const edm::Run& r, const edm::EventSetup& c) override {}  
+  void analyze(const edm::Event& e, const edm::EventSetup& c) override;
+
  private:
-  
+
+  edm::Service<TFileService> fs;
   void fillPix(const SiPixelCluster & LocPix, const PixelTopology * topol, Pixinfo& pixinfo);
   void surface_derormation(const PixelTopology *topol, 
 			   TrajectoryStateOnSurface &tsos, 
@@ -108,7 +116,6 @@ class SiPixelLorentzAngle : public edm::EDAnalyzer
 
   void findMean(int i, int i_ring);
   
-  TFile* hFile_;
   TTree* SiPixelLorentzAngleTree_;
   TTree* SiPixelLorentzAngleTreeForward_;
   
@@ -218,6 +225,11 @@ class SiPixelLorentzAngle : public edm::EDAnalyzer
   const TrackerGeometry * tracker;
   const MagneticField * magfield;
   TrajectoryStateTransform tsTransform;
+ 
+  edm::ESWatcher<SiPixelTemplateDBObjectESProducerRcd> watchSiPixelTemplateRcd_;
+  const SiPixelTemplateDBObject* templateDBobject_;
+  std::vector<SiPixelTemplateStore> thePixelTemp_;
+
   edm::EDGetTokenT<TrajTrackAssociationCollection> t_trajTrack;
   edm::EDGetTokenT<edm::SimTrackContainer>  tok_simTk_;  
 
@@ -229,8 +241,9 @@ class SiPixelLorentzAngle : public edm::EDAnalyzer
   
   edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomEsToken_;
   edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> topoToken_;
-
-
+  edm::ESGetToken<SiPixelTemplateDBObject, SiPixelTemplateDBObjectESProducerRcd> siPixelTemplateEsToken_;
+  edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> topoPerEventEsToken_;
+  edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomPerEventEsToken_;
 };
 
 #endif

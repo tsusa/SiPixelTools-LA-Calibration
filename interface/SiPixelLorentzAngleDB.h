@@ -3,13 +3,15 @@
 
 #include <map>
 
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
+#include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
+
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "DataFormats/DetId/interface/DetId.h"
@@ -20,7 +22,7 @@
 
 // #include "CalibTracker/SiStripLorentzAngle/interface/SiStripLorentzAngleAlgorithm.h"
 
-class SiPixelLorentzAngleDB : public edm::EDAnalyzer
+class SiPixelLorentzAngleDB : public edm::one::EDAnalyzer<>
 {
  public:
   
@@ -47,6 +49,7 @@ class SiPixelLorentzAngleDB : public edm::EDAnalyzer
   float fPixLorentzAnglePerTesla_;
   std::string fileName_;
   bool useFile_;
+  const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> tkGeomToken_;
 };
 
 

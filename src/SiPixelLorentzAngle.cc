@@ -40,8 +40,11 @@ using namespace edm;
 using namespace reco;
 
 SiPixelLorentzAngle::SiPixelLorentzAngle(edm::ParameterSet const& conf) : 
-  filename_(conf.getParameter<std::string>("fileName")), filenameFit_(conf.getParameter<std::string>("fileNameFit")), ptmin_(conf.getParameter<double>("ptMin")), simData_(conf.getParameter<bool>("simData")),	normChi2Max_(conf.getParameter<double>("normChi2Max")), clustSizeYMin_(conf.getParameter<int>("clustSizeYMin")), residualMax_(conf.getParameter<double>("residualMax")), clustChargeMax_(conf.getParameter<double>("clustChargeMax")),hist_depth_(conf.getParameter<int>("binsDepth")), hist_drift_(conf.getParameter<int>("binsDrift")), trackerHitAssociatorConfig_(consumesCollector()), geomEsToken_(esConsumes<edm::Transition::BeginRun>()), topoToken_(esConsumes<edm::Transition::BeginRun>())
+  filenameFit_(conf.getParameter<std::string>("fileNameFit")), ptmin_(conf.getParameter<double>("ptMin")), simData_(conf.getParameter<bool>("simData")),	normChi2Max_(conf.getParameter<double>("normChi2Max")), clustSizeYMin_(conf.getParameter<int>("clustSizeYMin")), residualMax_(conf.getParameter<double>("residualMax")), clustChargeMax_(conf.getParameter<double>("clustChargeMax")),hist_depth_(conf.getParameter<int>("binsDepth")), hist_drift_(conf.getParameter<int>("binsDrift")), trackerHitAssociatorConfig_(consumesCollector()), geomEsToken_(esConsumes<edm::Transition::BeginRun>()), topoToken_(esConsumes<edm::Transition::BeginRun>()), siPixelTemplateEsToken_(esConsumes<edm::Transition::BeginRun>()), topoPerEventEsToken_(esConsumes()), geomPerEventEsToken_(esConsumes())
 {
+
+  usesResource("TFileService");
+  
   //   	anglefinder_=new  TrackLocalAngle(conf);
   hist_x_ = 50;
   hist_y_ = 100;
@@ -61,7 +64,6 @@ SiPixelLorentzAngle::SiPixelLorentzAngle(edm::ParameterSet const& conf) :
   tok_caloEB_   = consumes<edm::PCaloHitContainer>(edm::InputTag("g4SimHits", "EcalHitsEB"));
   tok_caloEE_   = consumes<edm::PCaloHitContainer>(edm::InputTag("g4SimHits", "EcalHitsEE"));
   tok_caloHH_   = consumes<edm::PCaloHitContainer>(edm::InputTag("g4SimHits", "HcalHits"));
-
 }
 
 // Virtual destructor needed.
@@ -70,11 +72,10 @@ SiPixelLorentzAngle::~SiPixelLorentzAngle() {  }
 void SiPixelLorentzAngle::beginJob()
 {
 
-  //cout << "started SiPixelLorentzAngle" << endl;
-  hFile_ = new TFile (filename_.c_str(), "RECREATE" );
   int bufsize = 64000;
   // create tree structure
-  SiPixelLorentzAngleTree_ = new TTree("SiPixelLorentzAngleTree_","SiPixel LorentzAngle tree", bufsize);
+
+  SiPixelLorentzAngleTree_ = fs->make<TTree>("SiPixelLorentzAngleTree_","SiPixel LorentzAngle tree", bufsize);
   SiPixelLorentzAngleTree_->Branch("run", &run_, "run/I", bufsize);
   SiPixelLorentzAngleTree_->Branch("event", &event_, "event/l", bufsize);
   SiPixelLorentzAngleTree_->Branch("lumiblock", &lumiblock_, "lumiblock/I", bufsize);
@@ -138,23 +139,22 @@ void SiPixelLorentzAngle::beginJob()
   SiPixelLorentzAngleTreeForward_->Branch("rQmQt", &rQmQtF_, "rQmQt/F", bufsize);
 	
   // just for some expaining plots
-  h_cluster_shape_adc_  = new TH2F("h_cluster_shape_adc","cluster shape with adc weight", hist_x_, min_x_, max_x_, hist_y_, min_y_, max_y_);
-  h_cluster_shape_noadc_  = new TH2F("h_cluster_shape_noadc","cluster shape without adc weight", hist_x_, min_x_, max_x_, hist_y_, min_y_, max_y_);
-  h_cluster_shape_  = new TH2F("h_cluster_shape","cluster shape", hist_x_, min_x_, max_x_, hist_y_, min_y_, max_y_);
-  h_cluster_shape_adc_rot_  = new TH2F("h_cluster_shape_adc_rot","cluster shape with adc weight", hist_x_, min_x_, max_x_, hist_y_, -max_y_, -min_y_);
-  h_cluster_shape_noadc_rot_  = new TH2F("h_cluster_shape_noadc_rot","cluster shape without adc weight", hist_x_, min_x_, max_x_, hist_y_, -max_y_, -min_y_);
-  h_cluster_shape_rot_  = new TH2F("h_cluster_shape_rot","cluster shape", hist_x_, min_x_, max_x_, hist_y_, -max_y_, -min_y_);
-  h_tracks_ = new TH1F("h_tracks","h_tracks",2,0.,2.);
+  
+  h_cluster_shape_adc_  = fs->make<TH2F>("h_cluster_shape_adc","cluster shape with adc weight", hist_x_, min_x_, max_x_, hist_y_, min_y_, max_y_);
+  h_cluster_shape_noadc_  = fs->make<TH2F>("h_cluster_shape_noadc","cluster shape without adc weight", hist_x_, min_x_, max_x_, hist_y_, min_y_, max_y_);
+  h_cluster_shape_  = fs->make<TH2F>("h_cluster_shape","cluster shape", hist_x_, min_x_, max_x_, hist_y_, min_y_, max_y_);
+  h_cluster_shape_adc_rot_  = fs->make<TH2F>("h_cluster_shape_adc_rot","cluster shape with adc weight", hist_x_, min_x_, max_x_, hist_y_, -max_y_, -min_y_);
+  h_cluster_shape_noadc_rot_  = fs->make<TH2F>("h_cluster_shape_noadc_rot","cluster shape without adc weight", hist_x_, min_x_, max_x_, hist_y_, -max_y_, -min_y_);
+  h_cluster_shape_rot_  = fs->make<TH2F>("h_cluster_shape_rot","cluster shape", hist_x_, min_x_, max_x_, hist_y_, -max_y_, -min_y_);
+  h_tracks_ = fs->make<TH1F>("h_tracks","h_tracks",2,0.,2.);
+  
   event_counter_ = 0;
   trackEventsCounter_ = 0;
   // 	trackcounter_ = 0;
   hitCounter_ = 0;
   usedHitCounter_ = 0;
   pixelTracksCounter_ = 0;
-//   edm::ESHandle<TrackerGeometry> estracker; //this block should not be in beginJob()
-//   c.get<TrackerDigiGeometryRecord>().get(estracker);
-//   tracker=&(* estracker);
-	
+  
   nlay = 0;
   for (int i = 0; i < 4; i++){
      nModules_[i] = 0;
@@ -165,7 +165,14 @@ void SiPixelLorentzAngle::beginRun(const edm::Run & iRun, const edm::EventSetup 
 	
     const TrackerGeometry* geom = &es.getData(geomEsToken_);
     const TrackerTopology* tTopo = &es.getData(topoToken_);
-    
+    if (watchSiPixelTemplateRcd_.check(es)) {
+      templateDBobject_ = &es.getData(siPixelTemplateEsToken_);
+      if (!SiPixelTemplate::pushfile(*templateDBobject_, thePixelTemp_)) {
+        edm::LogError("SiPixelLorentzAnglePCLWorker")
+          << "Templates not filled correctly. Check the sqlite file. Using SiPixelTemplateDBObject version "
+          << (*templateDBobject_).version();
+      }
+    }    
     PixelTopologyMap map = PixelTopologyMap(geom,tTopo);
     
     nlay = geom->numberOfLayers(PixelSubdetector::PixelBarrel);
@@ -180,15 +187,15 @@ void SiPixelLorentzAngle::beginRun(const edm::Run & iRun, const edm::EventSetup 
    for(int i_layer = 1; i_layer<=nlay; i_layer++){
       for(int i_module = 1; i_module<=nModules_[i_layer - 1]; i_module++){
           sprintf(name, "h_drift_depth_adc_layer%i_module%i", i_layer, i_module);
-          _h_drift_depth_adc_[i_module + (i_layer -1) * nModules_[i_layer - 1]] = new TH2F(name,name,hist_drift_ , min_drift_, max_drift_, hist_depth_, min_depth_, max_depth_);
+          _h_drift_depth_adc_[i_module + (i_layer -1) * nModules_[i_layer - 1]] = fs->make<TH2F>(name,name,hist_drift_ , min_drift_, max_drift_, hist_depth_, min_depth_, max_depth_);
           sprintf(name, "h_drift_depth_adc2_layer%i_module%i", i_layer, i_module);
-          _h_drift_depth_adc2_[i_module + (i_layer -1) * nModules_[i_layer - 1]] = new TH2F(name,name,hist_drift_ , min_drift_, max_drift_, hist_depth_, min_depth_, max_depth_);
+          _h_drift_depth_adc2_[i_module + (i_layer -1) * nModules_[i_layer - 1]] = fs->make<TH2F>(name,name,hist_drift_ , min_drift_, max_drift_, hist_depth_, min_depth_, max_depth_);
           sprintf(name, "h_drift_depth_noadc_layer%i_module%i", i_layer, i_module);
-          _h_drift_depth_noadc_[i_module + (i_layer -1) * nModules_[i_layer - 1]] = new TH2F(name,name,hist_drift_ , min_drift_, max_drift_, hist_depth_, min_depth_, max_depth_);
+          _h_drift_depth_noadc_[i_module + (i_layer -1) * nModules_[i_layer - 1]] = fs->make<TH2F>(name,name,hist_drift_ , min_drift_, max_drift_, hist_depth_, min_depth_, max_depth_);
           sprintf(name, "h_drift_depth_layer%i_module%i", i_layer, i_module);
-          _h_drift_depth_[i_module + (i_layer -1) * nModules_[i_layer - 1]] = new TH2F(name,name,hist_drift_ , min_drift_, max_drift_, hist_depth_, min_depth_, max_depth_);
+          _h_drift_depth_[i_module + (i_layer -1) * nModules_[i_layer - 1]] = fs->make<TH2F>(name,name,hist_drift_ , min_drift_, max_drift_, hist_depth_, min_depth_, max_depth_);
           sprintf(name, "h_mean_layer%i_module%i", i_layer, i_module);
-          _h_mean_[i_module + (i_layer -1) * nModules_[i_layer - 1]] = new TH1F(name,name,hist_depth_, min_depth_, max_depth_);
+          _h_mean_[i_module + (i_layer -1) * nModules_[i_layer - 1]] = fs->make<TH1F>(name,name,hist_depth_, min_depth_, max_depth_);
     }
   }
 }
@@ -197,30 +204,10 @@ void SiPixelLorentzAngle::beginRun(const edm::Run & iRun, const edm::EventSetup 
 // Functions that gets called by framework every event
 void SiPixelLorentzAngle::analyze(const edm::Event& e, const edm::EventSetup& es)
 {  
-  //Retrieve template stuff
-  const SiPixelTemplateDBObject* templateDBobject_;
-  edm::ESHandle<SiPixelTemplateDBObject> templateDBobject;
-  es.get<SiPixelTemplateDBObjectESProducerRcd>().get(templateDBobject);
-  templateDBobject_ = templateDBobject.product();
-  std::vector<SiPixelTemplateStore> thePixelTemp_;
-  SiPixelTemplate templ(thePixelTemp_);
-  if (!SiPixelTemplate::pushfile(*templateDBobject_, thePixelTemp_))
-    cout << "\nERROR: Templates not filled correctly. Check the sqlite file."
-         << "Using SiPixelTemplateDBObject version "
-         << (*templateDBobject_).version() << "\n\n";
-  
-  //Retrieve tracker topology from geometry
-  edm::ESHandle<TrackerTopology> tTopoHandle;
-  es.get<TrackerTopologyRcd>().get(tTopoHandle);
-  const TrackerTopology* const tTopo = tTopoHandle.product();
-  
   event_counter_++;
-  // 	if(event_counter_ % 500 == 0) cout << "event number " << event_counter_ << endl;
-  //cout << "event number " << event_counter_ << endl;
-
-  edm::ESHandle<TrackerGeometry> estracker;
-  es.get<TrackerDigiGeometryRecord>().get(estracker);
-  tracker=&(* estracker);
+  SiPixelTemplate templ(thePixelTemp_);  
+  const TrackerTopology* const tTopo = &es.getData(topoPerEventEsToken_);
+  const TrackerGeometry* tracker = &es.getData(geomPerEventEsToken_);
 
   //get Handles to SimTracks and SimHits
   edm::Handle<edm::SimTrackContainer> SimTk;
@@ -600,7 +587,8 @@ void SiPixelLorentzAngle::endJob()
     }
   } // end loop over modules and layers
   fLorentzFit.close(); 
-  hFile_->cd();
+  //hFile_->cd();
+  /*
   for(int i_layer = 1; i_layer<=nlay; i_layer++){
         for(int i_module = 1; i_module<=nModules_[i_layer - 1]; i_module++){
            _h_drift_depth_adc_[i_module + (i_layer -1) * nModules_[i_layer - 1]]->Write();
@@ -610,14 +598,15 @@ void SiPixelLorentzAngle::endJob()
            _h_mean_[i_module + (i_layer -1) * nModules_[i_layer - 1]]->Write();
     }
   }
+
   h_cluster_shape_adc_->Write();
   h_cluster_shape_noadc_->Write();
   h_cluster_shape_adc_rot_->Write();
   h_cluster_shape_noadc_rot_->Write();
   h_tracks_->Write();
-	
-  hFile_->Write();
-  hFile_->Close();
+  */	
+  //hFile_->Write();
+  //hFile_->Close();
   cout << "events: " << event_counter_ << endl;
   cout << "events with tracks: " << trackEventsCounter_ << endl;	
   cout << "events with pixeltracks: " << pixelTracksCounter_ << endl;	
