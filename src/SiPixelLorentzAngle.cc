@@ -33,14 +33,14 @@
 #include "Geometry/TrackerGeometryBuilder/interface/PixelTopologyMap.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 
-int lower_bin_;
+//int lower_bin_;
 
 using namespace std;
 using namespace edm;
 using namespace reco;
 
 SiPixelLorentzAngle::SiPixelLorentzAngle(edm::ParameterSet const& conf) : 
-  filenameFit_(conf.getParameter<std::string>("fileNameFit")), ptmin_(conf.getParameter<double>("ptMin")), simData_(conf.getParameter<bool>("simData")),	normChi2Max_(conf.getParameter<double>("normChi2Max")), clustSizeYMin_(conf.getParameter<int>("clustSizeYMin")), residualMax_(conf.getParameter<double>("residualMax")), clustChargeMax_(conf.getParameter<double>("clustChargeMax")),hist_depth_(conf.getParameter<int>("binsDepth")), hist_drift_(conf.getParameter<int>("binsDrift")), trackerHitAssociatorConfig_(consumesCollector()), geomEsToken_(esConsumes<edm::Transition::BeginRun>()), topoToken_(esConsumes<edm::Transition::BeginRun>()), siPixelTemplateEsToken_(esConsumes<edm::Transition::BeginRun>()), topoPerEventEsToken_(esConsumes()), geomPerEventEsToken_(esConsumes())
+  filenameFit_(conf.getParameter<std::string>("fileNameFit")), ptmin_(conf.getParameter<double>("ptMin")), simData_(conf.getParameter<bool>("simData")),	normChi2Max_(conf.getParameter<double>("normChi2Max")), clustSizeYMin_(conf.getParameter<int>("clustSizeYMin")), residualMax_(conf.getParameter<double>("residualMax")), clustChargeMax_(conf.getParameter<double>("clustChargeMax")),hist_depth_(conf.getParameter<int>("binsDepth")), hist_drift_(conf.getParameter<int>("binsDrift")), trackerHitAssociatorConfig_(consumesCollector()), geomEsToken_(esConsumes<edm::Transition::BeginRun>()), topoToken_(esConsumes<edm::Transition::BeginRun>()), siPixelTemplateEsToken_(esConsumes<edm::Transition::BeginRun>()), topoPerEventEsToken_(esConsumes()), geomPerEventEsToken_(esConsumes()),  magFieldToken_(esConsumes<MagneticField, IdealMagneticFieldRecord, edm::Transition::BeginRun>())  
 {
 
   usesResource("TFileService");
@@ -71,7 +71,7 @@ SiPixelLorentzAngle::~SiPixelLorentzAngle() {  }
 
 void SiPixelLorentzAngle::beginJob()
 {
-
+  //std::cout << "BeginJob" << std::endl;
   int bufsize = 64000;
   // create tree structure
 
@@ -137,6 +137,9 @@ void SiPixelLorentzAngle::beginJob()
   SiPixelLorentzAngleTreeForward_->Branch("trackhitcorr_y", &trackhitCorrYF_, "trackhitcorr_y/F", bufsize);
   SiPixelLorentzAngleTreeForward_->Branch("qScale", &qScaleF_, "qScale/F", bufsize);
   SiPixelLorentzAngleTreeForward_->Branch("rQmQt", &rQmQtF_, "rQmQt/F", bufsize);
+  SiPixelLorentzAngleTreeForward_->Branch("mf_x", &magFieldF_[0], "mf_x/F", bufsize);
+  SiPixelLorentzAngleTreeForward_->Branch("mf_y", &magFieldF_[1], "mf_y/F", bufsize);
+  SiPixelLorentzAngleTreeForward_->Branch("mf_z", &magFieldF_[2], "mf_z/F", bufsize);
 	
   // just for some expaining plots
   
@@ -163,16 +166,22 @@ void SiPixelLorentzAngle::beginJob()
 
 void SiPixelLorentzAngle::beginRun(const edm::Run & iRun, const edm::EventSetup & es){
 	
+  //std::cout << "BeginRun" << std::endl;
     const TrackerGeometry* geom = &es.getData(geomEsToken_);
     const TrackerTopology* tTopo = &es.getData(topoToken_);
+    if (watchMagFieldRcd_.check(es)) {      
+      magfield_ = &es.getData(magFieldToken_);
+    }
+    
     if (watchSiPixelTemplateRcd_.check(es)) {
       templateDBobject_ = &es.getData(siPixelTemplateEsToken_);
       if (!SiPixelTemplate::pushfile(*templateDBobject_, thePixelTemp_)) {
-        edm::LogError("SiPixelLorentzAnglePCLWorker")
+        edm::LogError("SiPixelLorentzAngle")
           << "Templates not filled correctly. Check the sqlite file. Using SiPixelTemplateDBObject version "
           << (*templateDBobject_).version();
       }
     }    
+    
     PixelTopologyMap map = PixelTopologyMap(geom,tTopo);
     
     nlay = geom->numberOfLayers(PixelSubdetector::PixelBarrel);
@@ -204,7 +213,9 @@ void SiPixelLorentzAngle::beginRun(const edm::Run & iRun, const edm::EventSetup 
 // Functions that gets called by framework every event
 void SiPixelLorentzAngle::analyze(const edm::Event& e, const edm::EventSetup& es)
 {  
+  //std::cout << "Begin Analyzer" << std::endl;
   event_counter_++;
+  //std::cout << "Analyze: " << event_counter_ << std::endl;
   SiPixelTemplate templ(thePixelTemp_);  
   const TrackerTopology* const tTopo = &es.getData(topoPerEventEsToken_);
   const TrackerGeometry* tracker = &es.getData(geomPerEventEsToken_);
@@ -496,7 +507,7 @@ void SiPixelLorentzAngle::analyze(const edm::Event& e, const edm::EventSetup& es
           templ.interpolate(TemplID, cotalpha, cotbeta, locBz, locBx);
 	  qScaleF_ = templ.qscale();
           rQmQtF_ = templ.r_qMeas_qTrue();
-
+	  
           // Surface deformation
           LocalPoint lp_track;        
           LocalPoint lp_rechit;
@@ -506,7 +517,13 @@ void SiPixelLorentzAngle::analyze(const edm::Event& e, const edm::EventSetup& es
           trackhitCorrXF_ = lp_track.x();
           trackhitCorrYF_ = lp_track.y();
 	  
-					
+	  // Mag. field
+	  LocalVector Bfield = theGeomDet->surface().toLocal(magfield_->inTesla(theGeomDet->surface().position()));
+	  
+	  magFieldF_[0] = Bfield.x();
+	  magFieldF_[1] = Bfield.y();
+	  magFieldF_[2] = Bfield.z();
+	  
 	  // fill entries in simhit_:	
 /*	  if(simData_){
 	    matched.clear();        

@@ -1,5 +1,5 @@
-#ifndef CalibTracker_SiPixelLorentzAngle_SiPixelLorentzAngle_h
-#define CalibTracker_SiPixelLorentzAngle_SiPixelLorentzAngle_h
+#ifndef CalibTracker_SiPixelLorentzAngle_SiPixelLorentzAngleAnalyser_h
+#define CalibTracker_SiPixelLorentzAngle_SiPixelLorentzAngleAnalyser_h
 
 #include "FWCore/Framework/interface/one/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
@@ -12,6 +12,7 @@
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeed.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
+#include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "TrackingTools/MaterialEffects/interface/PropagatorWithMaterial.h"
 #include "TrackingTools/KalmanUpdators/interface/KFUpdator.h"
@@ -40,8 +41,9 @@
 #include <TH1F.h>
 #include <TH2F.h>
 #include <TF1.h>
-#include "TROOT.h"
+#include <TROOT.h>
 #include "LAStructures.h"
+#include "MCSHistograms.h"
 
 /**
 * 
@@ -92,13 +94,13 @@ struct Hit
 */
 //}
 
-class SiPixelLorentzAngle : public edm::one::EDAnalyzer<edm::one::WatchRuns,edm::one::SharedResources> 
+class SiPixelLorentzAngleAnalyser : public edm::one::EDAnalyzer<edm::one::WatchRuns,edm::one::SharedResources> 
 {
 public:
 
-  explicit SiPixelLorentzAngle(const edm::ParameterSet& conf);
+  explicit SiPixelLorentzAngleAnalyser(const edm::ParameterSet& conf);
 
-  virtual ~SiPixelLorentzAngle();
+  virtual ~SiPixelLorentzAngleAnalyser();
   virtual void beginJob();
   virtual void endJob();
   void beginRun(const edm::Run& r, const edm::EventSetup& c) override;
@@ -106,7 +108,10 @@ public:
   void analyze(const edm::Event& e, const edm::EventSetup& c) override;
 
  private:
-  int lower_bin_;  
+  void ntupleAnalysisFpix();
+  int fpixMinimumClusterSize();
+
+  //int lower_bin_;  
   edm::Service<TFileService> fs;
   void fillPix(const SiPixelCluster & LocPix, const PixelTopology * topol, Pixinfo& pixinfo);
   void surface_derormation(const PixelTopology *topol, 
@@ -114,16 +119,10 @@ public:
 			   const SiPixelRecHit *recHitPix,
 			   LocalPoint &lp_track, 
 			   LocalPoint &lp_rechit);
-
-
-  void findMean(int i, int i_ring);
-  
-  TTree* SiPixelLorentzAngleTree_;
-  TTree* SiPixelLorentzAngleTreeForward_;
   
   // tree branches barrel
   int run_;
-  long int event_;
+  ULong64_t event_;
   int lumiblock_;
   int bx_;
   int orbit_;
@@ -148,7 +147,7 @@ public:
   
   // tree branches forward
   int runF_;
-  int eventF_;  
+  long int eventF_;  
   int sideF_;
   int diskF_;
   int bladeF_;
@@ -171,47 +170,72 @@ public:
   float magFieldF_[3];
   
   // parameters from config file
-
+  int year_;
   std::string filename_;
   std::string filenameFit_;
+  std::string source_;
+  std::string subdetector_;
+  std::string analysisType_;
+  double fitRegionMin_;
+  double fitRegionMax_;
+  double fitRegionLinMin_;
+  double fitRegionLinMax_;
+  int nBinsX_;
+  double xMin_, xMax_;
+  int nBinsY_;
+  double yMin_, yMax_;
   double ptmin_;
-  bool simData_;
   double normChi2Max_;
-  int clustSizeYMin_;
+  std::vector<int> clustSizeYMin_;
+  int clustSizeYMax_;
+  int clustSizeXMax_;
   double residualMax_;
   double clustChargeMax_;
-  int hist_depth_;
-  int hist_drift_;
+  bool largePixCut_;
+  int maxNumberOfPixelsCut_;  
+  std::vector<std::string> root_fileNames_;
 
+  const double width_ = 0.0285;
+  const double ypitch_ = 0.0150;
+  const double hypitch_ = ypitch_/2.;  
+  
+  // ==== Histograms
+  // ----  Constants
+  static const int nLayersMax_ = 4;
+  static const int nModulesMax_ = 8;
+  static const int nZSidesMax_ = 2;
+  static const int nFlippedMax_ = 2;
+  static const int nCentralEndMax_ = 2;
+  // FPix 
+  static const int nRingsMax_ = 2;
+  static const int nPanelsMax_ = 2;
+  
+  // --- Control Distributions
+  TH1F *h_ptBC_, *h_ptAC_;
+  TH1F *h_ndofBC_, *h_ndofAC_;
+  TH1F *h_chi2BC_, *h_chi2AC_;
+  TH1F *h_normChi2BC_, *h_normChi2AC_;
+  TH1F *h_nPixBC_, *h_nPixAC_;
+  TH1F *h_cotAlphaBC_, *h_cotAlphaAC_;
+  TH1F *h_cotBetaBC_, *h_cotBetaAC_;
+  TH1F *h_cotBetaLayerBC_[nLayersMax_], *h_cotBetaLayerAC_[nLayersMax_];
+  TH1F *h_largePixBC_, *h_largePixAC_;
+  TH1F *h_clusterSizeYBC_, *h_clusterSizeYAC_;
+  TH1F *h_clusterSizeXBC_, *h_clusterSizeXAC_;
+  TH1F *h_clusterSizeYLayerBC_[nLayersMax_];
+  TH1F *h_clusterSizeYLayerAC_[nLayersMax_];
+  TH1F *h_clusterChargeBC_, *h_clusterChargeAC_;
+  TH1F *h_residualBC_, *h_residualAC_;
+  
+  MCSHistograms mcshFPixAlpha_[nRingsMax_][nPanelsMax_][nZSidesMax_];
+  MCSHistograms mcshFPixBeta_[nRingsMax_][nPanelsMax_][nZSidesMax_];
+  TH1D  *magFieldHisto_[nRingsMax_][nPanelsMax_][nZSidesMax_][3];
+  double meanMagField_[nRingsMax_][nPanelsMax_][nZSidesMax_][3];
+  double countMagField_[nRingsMax_][nPanelsMax_][nZSidesMax_];
+  
   TrackerHitAssociator::Config trackerHitAssociatorConfig_;
-  // histogram etc
-  int hist_x_;
-  int hist_y_;
-  double min_x_;
-  double max_x_;
-  double min_y_;
-  double max_y_;
-  double width_;
-  double min_depth_;
-  double max_depth_;
-  double min_drift_;
-  double max_drift_;
   
-  std::map<int, TH2F*> _h_drift_depth_adc_;
-  std::map<int, TH2F*> _h_drift_depth_adc2_;
-  std::map<int, TH2F*> _h_drift_depth_noadc_;
-  std::map<int, TH2F*> _h_drift_depth_;
-  TH1F* h_drift_depth_adc_slice_;
-  std::map<int, TH1F*> _h_mean_;
-  TH2F *h_cluster_shape_adc_;
-  TH2F *h_cluster_shape_noadc_;
-  TH2F *h_cluster_shape_;
-  TH2F *h_cluster_shape_adc_rot_;
-  TH2F *h_cluster_shape_noadc_rot_;
-  TH2F *h_cluster_shape_rot_;
-  TH1F *h_tracks_;
-  
-  
+  MCSHistograms mcshTest_;
   int event_counter_, trackEventsCounter_,pixelTracksCounter_, hitCounter_, usedHitCounter_;
   
   int nlay;
@@ -222,26 +246,19 @@ public:
   PropagatorWithMaterial  *thePropagatorOp;
   KFUpdator *theUpdator;
   Chi2MeasurementEstimator *theEstimator;
-  const TransientTrackingRecHitBuilder *RHBuilder;
-  const KFTrajectorySmoother * theSmoother;
-  const KFTrajectoryFitter * theFitter;
-  const TrackerGeometry * tracker;
+  //const TransientTrackingRecHitBuilder *RHBuilder;
+  //const KFTrajectorySmoother * theSmoother;
+  // const KFTrajectoryFitter * theFitter;
+  //  const TrackerGeometry * tracker;
   const MagneticField * magfield_;
-  TrajectoryStateTransform tsTransform;
- 
+  //TrajectoryStateTransform tsTransform;
+  
   edm::ESWatcher<IdealMagneticFieldRecord> watchMagFieldRcd_;
   edm::ESWatcher<SiPixelTemplateDBObjectESProducerRcd> watchSiPixelTemplateRcd_;
   const SiPixelTemplateDBObject* templateDBobject_;
   std::vector<SiPixelTemplateStore> thePixelTemp_;
 
   edm::EDGetTokenT<TrajTrackAssociationCollection> t_trajTrack;
-  edm::EDGetTokenT<edm::SimTrackContainer>  tok_simTk_;  
-
-
-  edm::EDGetTokenT<edm::SimVertexContainer> tok_simVtx_;
-  edm::EDGetTokenT<edm::PCaloHitContainer>  tok_caloEB_;
-  edm::EDGetTokenT<edm::PCaloHitContainer>  tok_caloEE_;
-  edm::EDGetTokenT<edm::PCaloHitContainer>  tok_caloHH_;
   
   edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomEsToken_;
   edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> topoToken_;
